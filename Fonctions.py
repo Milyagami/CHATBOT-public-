@@ -1,20 +1,6 @@
 from collections import Counter
 import os
 import math
-def print_bot():
-    print("\033[1;36m")  # Utiliser le code de couleur ANSI pour définir la couleur en cyan brillant (1;36)
-    print(r"""
-   _____ _           _            
-  / ____| |         | |      
- | |    | |__   __ _| |_  
- | |    | '_ \ / _` | __|
- | |____| | | | (_| | |_ 
-  \_____|_| |_|\__,_|\__|                                                                                                      
-    """)
-
-
-
-
 def extraire_nom_president(nom_fichier):
     # Obtention du chemin absolu du dossier contenant les fichiers
     dossier_speeches = "speeches"
@@ -169,6 +155,7 @@ def compute_tf(corpus_dir):
 
     return word_doc_count, total_docs
 
+
 def calculate_idf(corpus_dir):
     word_doc_count, total_docs = compute_tf(corpus_dir)
     word_idf = {}
@@ -179,54 +166,51 @@ def calculate_idf(corpus_dir):
 
     return word_idf
 
+
 def compute_tf_idf(corpus_dir):
     word_idf = calculate_idf(corpus_dir)
-    word_tf_idf_matrix = []
+    word_tf_dict, _ = compute_tf(corpus_dir)
+    word_tf_idf_dict = {}  # Utilisation d'un dictionnaire pour stocker les TF-IDF pour chaque mot
 
-    # Parcourir à nouveau les fichiers du corpus pour calculer TF-IDF
+    # Parcourir les fichiers du corpus pour calculer TF-IDF
     for filename in os.listdir(corpus_dir):
-        file_words = {}
-
         # Lire chaque fichier et compter les mots
         with open(os.path.join(corpus_dir, filename), 'r', encoding='utf-8') as file:
             words = file.read().split()
 
             # Compter les occurrences de chaque mot dans le fichier
             word_counts = Counter(words)
+            total_words_in_doc = sum(word_counts.values())
 
             # Calculer TF-IDF pour chaque mot dans le fichier
-            file_tf_idf = []
             for word, tf in word_counts.items():
                 word = word.lower()
-                tf_idf = tf * word_idf.get(word, 0)  # Si le mot n'existe pas dans IDF, TF-IDF = TF * 0
-                file_tf_idf.append(tf_idf)
+                tf_idf = (tf / total_words_in_doc) * word_idf.get(word, 0)  # Calcul du TF * IDF
 
-            word_tf_idf_matrix.append(file_tf_idf)
+                # Ajouter le mot et son TF-IDF au dictionnaire
+                if word in word_tf_idf_dict:
+                    word_tf_idf_dict[word].append(tf_idf)
+                else:
+                    word_tf_idf_dict[word] = [tf_idf]
 
-    return word_tf_idf_matrix
-def get_non_important_words(tf_idf_matrix, word_doc_count):
-    non_important_words = set()
+    # Calculer la moyenne des TF-IDF pour chaque mot
+    for word, tf_idf_list in word_tf_idf_dict.items():
+        word_tf_idf_dict[word] = sum(tf_idf_list) / len(tf_idf_list)
 
-    # Récupérer les mots ayant un score TF-IDF nul dans tous les fichiers
-    for file_tf_idf in tf_idf_matrix:
-        for word, tf_idf_score in zip(word_doc_count.keys(), file_tf_idf):
-            if tf_idf_score == 0:
-                # Ajouter le mot à la liste des mots non importants
-                non_important_words.add(word)
+    return word_tf_idf_dict
 
-    return list(non_important_words)
 
-#fonction qui nous permettra d'afficher le mot associé au plus haut TF-Idf
-def get_unique_words(corpus_directory):
-    unique_words = set()
 
-    # Parcourir les fichiers du corpus pour extraire les mots uniques
-    for filename in os.listdir(corpus_directory):
-        with open(os.path.join(corpus_directory, filename), 'r', encoding='utf-8') as file:
-            words = file.read().split()
-            unique_words.update(words)
+def get_non_important_words(tf_idf_matrix):
+    non_important_words = []
 
-    return list(unique_words)
+    # Parcourir les mots et vérifier si leur score TF-IDF est nul dans tous les fichiers
+    for word, tf_idf_score in tf_idf_matrix.items():
+        if tf_idf_score == 0.0:
+            non_important_words.append(word)
+
+    return non_important_words
+
 def get_word_with_highest_tfidf(corpus_directory):
     # Calculer la matrice TF-IDF
     tf_idf_matrix = compute_tf_idf(corpus_directory)
@@ -235,17 +219,13 @@ def get_word_with_highest_tfidf(corpus_directory):
     word_associated = None
 
     # Parcourir la matrice TF-IDF pour trouver le score TF-IDF le plus élevé et son mot associé
-    for document in tf_idf_matrix:
-        for word, tf_idf_score in enumerate(document):
-            if tf_idf_score > highest_tfidf_score:
-                highest_tfidf_score = tf_idf_score
-                word_associated = word
+    for word, tf_idf_score in tf_idf_matrix.items():
+        if tf_idf_score > highest_tfidf_score:
+            highest_tfidf_score = tf_idf_score
+            word_associated = word
 
-    # Récupérer le mot associé au score TF-IDF le plus élevé
-    unique_words = get_unique_words(corpus_directory)
-    word = unique_words[word_associated]
+    return word_associated, highest_tfidf_score
 
-    return word, highest_tfidf_score
 
 def compute_tf2(file_path):
     with open(file_path, 'r', encoding='utf-8') as file:
@@ -257,7 +237,6 @@ def compute_tf2(file_path):
 def detect_first_president_to_mention(directory):
     # Initialisation des variables
     first_president = None
-    first_occurrence = float('inf')  # Initialisation de la première occurrence à une valeur élevée
 
     # Parcourir les fichiers du répertoire
     for filename in os.listdir(directory):
@@ -272,12 +251,13 @@ def detect_first_president_to_mention(directory):
 
                 # Vérifier si c'est la première occurrence
                 if president_name and president_name not in ['cleaned', 'speeches'] and 'Nomination' not in filename:
-                    # Récupérer l'ordre de ce discours dans la liste des discours
-                    order_of_occurrence = list_of_files(directory, ".txt").index(filename)
-
-                    # Mettre à jour si c'est la première occurrence trouvée
-                    if order_of_occurrence < first_occurrence:
-                        first_occurrence = order_of_occurrence
-                        first_president = president_name
+                    first_president = president_name
+                    break  # Sortir de la boucle après la première occurrence trouvée
 
     return first_president
+
+
+
+
+
+
