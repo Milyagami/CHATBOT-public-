@@ -3,7 +3,7 @@ Lien GitHub: https://github.com/Milyagami/CHATBOT-public-.git
 Partie 1 :
 My first ChatBot
 
-Mathieu Rat
+Matthieu Rat
 Milhane aifi
 
 Bonjour,
