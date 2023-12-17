@@ -107,3 +107,15 @@ if __name__ == '__main__':
     first_president_climate_ecology = detect_first_president_to_mention("cleaned")
     print("")
     print(f"Le premier président à mentionner le climat ou l'écologie est : {first_president_climate_ecology}")
+
+
+    question_utilisateur = input("entrer une question:")
+    mots_question = tokenizer_question(question_utilisateur)
+    print("\n","Mots de la question :", mots_question)
+
+
+    termes_dans_corpus = trouver_termes_dans_corpus(question_utilisateur, directory_cleaned)
+    print("\nTermes de la question présents dans le corpus :", termes_dans_corpus)
+
+    tfidf_question = compute_tfidf_question(question_utilisateur, directory_cleaned)
+    print("\n",tfidf_question)
