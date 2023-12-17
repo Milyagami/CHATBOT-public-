@@ -1,6 +1,7 @@
 from collections import Counter
 import os
 import math
+import string
 def extraire_nom_president(nom_fichier):
     # Obtention du chemin absolu du dossier contenant les fichiers
     dossier_speeches = "speeches"
@@ -256,8 +257,90 @@ def detect_first_president_to_mention(directory):
 
     return first_president
 
+def supprimer_caracteres_speciaux_txt(text):
+    # Supprimer les caractères spéciaux
+    for caractere in string.punctuation:
+        text = text.replace(caractere, ' ')
+    return text
+
+def convertir_majuscules_en_minuscules_txt(text):
+    # Convertir en minuscules
+    return text.lower()
+
+def tokenizer_question(question):
+    # Supprimer les caractères spéciaux
+    question = supprimer_caracteres_speciaux_txt(question)
+
+    # Convertir en minuscules
+    question = convertir_majuscules_en_minuscules_txt(question)
+
+    # Initialiser une liste pour stocker les mots
+    mots = []
+
+    # Séparer en mots individuels et les ajouter à la liste
+    for mot in question.split():
+        mots.append(mot)
+
+    return mots
+
+
+def trouver_termes_dans_corpus(question, directory_cleaned):
+
+    # Tokeniser la question
+    mots_question = tokenizer_question(question)
+
+    # Créer un ensemble pour stocker les termes de la question présents dans le corpus
+    termes_dans_corpus = set()
+
+    # Parcourir les fichiers du corpus
+    for filename in os.listdir(directory_cleaned):
+        filepath = os.path.join(directory_cleaned, filename)
+        with open(filepath, 'r', encoding='utf-8') as file:
+            content = file.read()
+
+            # Tokeniser le contenu du fichier
+            mots_corpus = tokenizer_question(content)
+
+            # Identifier les termes de la question présents dans le corpus
+            termes_question_dans_corpus = set(mots_question) & set(mots_corpus)
+
+            # Ajouter les termes à l'ensemble global
+            termes_dans_corpus.update(termes_question_dans_corpus)
+
+    return termes_dans_corpus
 
 
 
+def calculate_tf_question(question):
+    # Tokenization de la question
+    words_in_question = tokenizer_question(question)
 
+    # Calcul du score TF pour chaque mot de la question
+    tf_question = {}
+    for word in words_in_question:
+        if word in tf_question:
+            tf_question[word] += 1
+        else:
+            tf_question[word] = 1
 
+    return tf_question
+
+def compute_tfidf_question(question, corpus_dir):
+    # Obtention des scores IDF et TF du corpus
+    word_idf = calculate_idf(corpus_dir)
+    word_tf_dict, _ = compute_tf(corpus_dir)
+
+    # Calcul du score TF pour chaque mot de la question
+    tf_question = calculate_tf_question(question)
+
+    # Initialisation du vecteur TF-IDF de la question
+    tfidf_question = {}
+
+    # Calcul du score TF-IDF pour chaque mot de la question en utilisant les scores IDF du corpus
+    for word, tf_question_value in tf_question.items():
+        if word in word_idf:
+            tfidf_question[word] = tf_question_value * word_idf[word]
+        else:
+            tfidf_question[word] = 0  # Mettre 0 pour les mots absents dans les scores IDF du corpus
+
+    return tfidf_question
