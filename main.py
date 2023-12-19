@@ -95,12 +95,12 @@ if __name__ == '__main__':
             elif nombre_repetitions == nombre_max_repetitions:
                 presidents_avec_nation.append(nom_du_president)
 
-    # Affichage des présidents ayant parlé de la "Nation" et celui qui l'a répété le plus de fois
     if presidents_avec_nation:
         print("")
         print(f"Présidents ayant parlé de la 'Nation': {', '.join(presidents_avec_nation)}")
         print("")
-        print(f"Président qui a répété le plus de fois le mot 'Nation': {', '.join(presidents_avec_nation)} avec {nombre_max_repetitions} répétitions.")
+        print(
+            f"Président qui a répété le plus de fois le mot 'Nation': {', '.join(presidents_avec_nation)} avec {nombre_max_repetitions} répétitions.")
 
     ########################
 
@@ -108,14 +108,45 @@ if __name__ == '__main__':
     print("")
     print(f"Le premier président à mentionner le climat ou l'écologie est : {first_president_climate_ecology}")
 
+    # (Les fonctions définies restent inchangées)
 
-    question_utilisateur = input("entrer une question:")
+    # Partie du code utilisant les fonctions définies
+
+    question_utilisateur = input("Entrer une question : ")
     mots_question = tokenizer_question(question_utilisateur)
-    print("\n","Mots de la question :", mots_question)
-
+    print("\nMots de la question :", mots_question)
 
     termes_dans_corpus = trouver_termes_dans_corpus(question_utilisateur, directory_cleaned)
     print("\nTermes de la question présents dans le corpus :", termes_dans_corpus)
 
     tfidf_question = compute_tfidf_question(question_utilisateur, directory_cleaned)
-    print("\n",tfidf_question)
+    print("\nVecteur TF-IDF de la question :", tfidf_question)
+
+    print("\nRecherche du document le plus pertinent :")
+    question_tfidf_vector = tfidf_question  # Utiliser le même vecteur pour la recherche
+
+    tfidf_matrix_corpus = compute_tf_idf(directory_cleaned)
+
+    # Calcul de l'indice du document le plus pertinent
+    most_relevant_doc_name = find_most_relevant_document(tfidf_matrix_corpus, question_tfidf_vector)
+    print(f"Le document le plus pertinent est : {most_relevant_doc_name}")
+
+    # Convertir le nom du fichier pertinent dans le répertoire "cleaned" vers "speeches"
+    original_doc_name = convertir_nom_fichier(original_dir="cleaned", target_dir="speeches",
+                                              filename=most_relevant_doc_name)
+    print(f"Le document pertinent dans le répertoire 'speeches' est : {original_doc_name}")
+
+    # Trouver le mot avec le TF-IDF le plus élevé dans la question
+    highest_tfidf_word = highest_tf_idf_word(question_tfidf_vector)
+    print(f"\nLe mot avec le TF-IDF le plus élevé dans la question est : {highest_tfidf_word}")
+
+    # Trouver la première occurrence de ce mot dans le document
+    with open(original_doc_name, 'r', encoding='utf-8') as file:
+        content = file.read()
+    sentence_with_highest_tfidf_word = find_sentence_with_word(content, highest_tfidf_word)
+    print(
+        f"\nLa phrase dans le document pertinent contenant le mot avec le TF-IDF le plus élevé est : {sentence_with_highest_tfidf_word}")
+
+    # Affiner la réponse générée
+    refined_response = refine_response(question_utilisateur, sentence_with_highest_tfidf_word)
+    print(f"\nLa réponse générée est : {refined_response}")
