@@ -204,29 +204,20 @@ def compute_tf_idf(corpus_dir):
 
 def get_non_important_words(tf_idf_matrix):
     non_important_words = []
-
-    # Parcourir les mots et vérifier si leur score TF-IDF est nul dans tous les fichiers
     for word, tf_idf_score in tf_idf_matrix.items():
         if tf_idf_score == 0.0:
             non_important_words.append(word)
-
     return non_important_words
 
 def get_word_with_highest_tfidf(corpus_directory):
-    # Calculer la matrice TF-IDF
     tf_idf_matrix = compute_tf_idf(corpus_directory)
-
     highest_tfidf_score = float('-inf')
     word_associated = None
-
-    # Parcourir la matrice TF-IDF pour trouver le score TF-IDF le plus élevé et son mot associé
     for word, tf_idf_score in tf_idf_matrix.items():
         if tf_idf_score > highest_tfidf_score:
             highest_tfidf_score = tf_idf_score
             word_associated = word
-
     return word_associated, highest_tfidf_score
-
 
 def compute_tf2(file_path):
     with open(file_path, 'r', encoding='utf-8') as file:
@@ -234,95 +225,55 @@ def compute_tf2(file_path):
         word_counts = Counter(words)
         return word_counts
 
-
 def detect_first_president_to_mention(directory):
-    # Initialisation des variables
     first_president = None
-
-    # Parcourir les fichiers du répertoire
     for filename in os.listdir(directory):
         filepath = os.path.join(directory, filename)
         with open(filepath, 'r', encoding='utf-8') as file:
             content = file.read()
-
-            # Vérifier si les mots clés "climat" ou "écologie" sont présents dans le discours
             if 'climat' in content.lower() or 'écologie' in content.lower():
-                # Récupérer le nom du président
                 president_name = extraire_nom_president(filename)
-
-                # Vérifier si c'est la première occurrence
                 if president_name and president_name not in ['cleaned', 'speeches'] and 'Nomination' not in filename:
                     first_president = president_name
-                    break  # Sortir de la boucle après la première occurrence trouvée
-
+                    break
     return first_president
 
 def supprimer_caracteres_speciaux_txt(text):
-    # Supprimer les caractères spéciaux
     for caractere in string.punctuation:
         text = text.replace(caractere, ' ')
     return text
 
 def convertir_majuscules_en_minuscules_txt(text):
-    # Convertir en minuscules
     return text.lower()
 
 def tokenizer_question(question):
-    # Supprimer les caractères spéciaux
     question = supprimer_caracteres_speciaux_txt(question)
-
-    # Convertir en minuscules
     question = convertir_majuscules_en_minuscules_txt(question)
-
-    # Initialiser une liste pour stocker les mots
     mots = []
-
-    # Séparer en mots individuels et les ajouter à la liste
     for mot in question.split():
         mots.append(mot)
-
     return mots
 
-
 def trouver_termes_dans_corpus(question, directory_cleaned):
-
-    # Tokeniser la question
     mots_question = tokenizer_question(question)
-
-    # Créer un ensemble pour stocker les termes de la question présents dans le corpus
     termes_dans_corpus = set()
-
-    # Parcourir les fichiers du corpus
     for filename in os.listdir(directory_cleaned):
         filepath = os.path.join(directory_cleaned, filename)
         with open(filepath, 'r', encoding='utf-8') as file:
             content = file.read()
-
-            # Tokeniser le contenu du fichier
             mots_corpus = tokenizer_question(content)
-
-            # Identifier les termes de la question présents dans le corpus
             termes_question_dans_corpus = set(mots_question) & set(mots_corpus)
-
-            # Ajouter les termes à l'ensemble global
             termes_dans_corpus.update(termes_question_dans_corpus)
-
     return termes_dans_corpus
 
-
-
 def calculate_tf_question(question):
-    # Tokenization de la question
     words_in_question = tokenizer_question(question)
-
-    # Calcul du score TF pour chaque mot de la question
     tf_question = {}
     for word in words_in_question:
         if word in tf_question:
             tf_question[word] += 1
         else:
             tf_question[word] = 1
-
     return tf_question
 
 def compute_tfidf_question(question, corpus_dir):
@@ -344,3 +295,64 @@ def compute_tfidf_question(question, corpus_dir):
             tfidf_question[word] = 0  # Mettre 0 pour les mots absents dans les scores IDF du corpus
 
     return tfidf_question
+
+def tokenize_question(question):
+    question = question.lower()
+    question = question.translate(str.maketrans('', '', string.punctuation))
+    tokens = question.split()
+    return tokens
+
+def find_terms_in_corpus(question_tokens, idf_scores):
+    return [token for token in question_tokens if token in idf_scores]
+
+def calculate_question_tf_idf(question_tokens, unique_words, idf_scores):
+    word_freq = Counter(" ".join(question_tokens))
+    question_tf_idf = [0] * len(unique_words)
+    for i, word in enumerate(unique_words):
+        if word in word_freq:
+            question_tf_idf[i] = word_freq[word] * idf_scores.get(word, 0)
+    return question_tf_idf
+
+def dot_product(vector_a, vector_b):
+    return sum(a * b for a, b in zip(vector_a.values(), vector_b.values()))
+
+def vecteur_norm(vector):
+    return math.sqrt(sum(a * a for a in vector.values()))
+
+def cosinus_similarité(vector_a, vector_b):
+    dot_prod = dot_product(vector_a, vector_b)
+    norm_a = vecteur_norm(vector_a)
+    norm_b = vecteur_norm(vector_b)
+    if norm_a == 0 or norm_b == 0:
+        return 0
+    return dot_prod / (norm_a * norm_b)
+
+def find_most_relevant_document(tfidf_matrix, question_vector):
+    highest_similarity = 0
+    most_relevant_doc_index = None  # Pour stocker le nom du document le plus similaire
+    for doc_name, doc_vector in tfidf_matrix.items(): # l'erreur vient du départ car on fait des moyennes du tf idf de l'ensemble de chaque dossiers
+        similarity = cosinus_similarité(question_vector, doc_vector)
+        if similarity > highest_similarity:
+            highest_similarity = similarity
+            most_relevant_doc_index = doc_name
+    return most_relevant_doc_index
+
+
+def highest_tf_idf_word(question_tf_idf, unique_words):
+    highest_score_index = question_tf_idf.index(max(question_tf_idf))
+    return unique_words[highest_score_index]
+
+def find_sentence_with_word(text, word):
+    sentences = [sentence.strip() + '.' for sentence in text.split('.') if word in sentence]
+    return sentences[0] if sentences else ""
+
+def refine_response(question, answer):
+    question_starters = {
+        "Comment": "Après analyse, ",
+        "Pourquoi": "Car, ",
+        "Peux-tu": "Oui, bien sûr! ",
+    }
+    for starter, response_starter in question_starters.items():
+        if question.startswith(starter):
+            return response_starter + answer[0].upper() + answer[1:]
+    return answer[0].upper() + answer[1:]
